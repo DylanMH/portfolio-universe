@@ -37,6 +37,8 @@ function getBlackHoleShaders(nsteps: number, step: number) {
     #define NSTEPS ${nsteps}
     #define DISK_IN ${DISK_IN.toFixed(4)}
     #define DISK_OUT ${DISK_OUT.toFixed(4)}
+    #define DISK_HALF 0.15
+    #define DISK_INTENSITY 2.75
 
     uniform float uTime;
     uniform float uScale;
@@ -63,37 +65,33 @@ function getBlackHoleShaders(nsteps: number, step: number) {
         velocity += accel * ds;
         float dist = length(point);
 
-        bool horizon_mask = dist < 1.0 && length(oldpoint) > 1.0;
-        if (horizon_mask) {
+        if (dist < 1.0 && length(oldpoint) > 1.0) {
           hasHit = true;
           color = vec4(0.0, 0.0, 0.0, 1.0);
           break;
         }
 
-        if (oldpoint.y * point.y < 0.0) {
-          float lambda = -oldpoint.y / velocity.y;
-          vec3 intersection = oldpoint + lambda * velocity;
-          float r = length(intersection);
-          if (r >= DISK_IN && r <= DISK_OUT) {
-            float phi = atan(intersection.x, intersection.z);
-            phi -= uTime;
-            phi = mod(phi, 2.0 * PI);
+        // Volumetric thin-disk: every step near the disk plane contributes a
+        // density-weighted sample. No binary plane-crossing test, so there is
+        // no per-pixel aliasing for GPU float differences to amplify.
+        float radial = length(point.xz);
+        if (radial >= DISK_IN && radial <= DISK_OUT && abs(point.y) < 0.5) {
+          float phi = atan(point.x, point.z);
+          phi -= uTime;
+          phi = mod(phi, 2.0 * PI);
 
-            vec2 tex_coord = vec2(phi / (2.0 * PI), 1.0 - (r - DISK_IN) / (DISK_OUT - DISK_IN));
-            // Positive LOD bias samples a blurrier mip level, which suppresses
-            // the moire stipple that appears when the disk is minified edge-on.
-            vec4 tex_color = texture2D(uDiskTexture, tex_coord, 0.75);
-            vec3 disk_color = tex_color.rgb;
-            float disk_alpha = clamp(dot(disk_color, disk_color) / 6.0, 0.0, 1.0);
-            float fade = smoothstep(DISK_OUT, DISK_OUT * 0.75, r) * smoothstep(DISK_IN * 0.95, DISK_IN * 1.2, r);
-            disk_alpha *= fade;
+          vec2 tex_coord = vec2(phi / (2.0 * PI), 1.0 - (radial - DISK_IN) / (DISK_OUT - DISK_IN));
+          vec3 disk_color = texture2D(uDiskTexture, tex_coord, 0.5).rgb;
+          float density = exp(-(point.y * point.y) / (2.0 * DISK_HALF * DISK_HALF));
+          float disk_alpha = clamp(dot(disk_color, disk_color) / 6.0, 0.0, 1.0);
+          disk_alpha *= smoothstep(DISK_OUT, DISK_OUT * 0.75, radial) * smoothstep(DISK_IN * 0.95, DISK_IN * 1.2, radial);
+          disk_alpha *= density;
 
-            if (disk_alpha > 0.0) {
-              hasHit = true;
-            }
-
-            color += vec4(disk_color, 1.0) * disk_alpha;
+          if (disk_alpha * ds * DISK_INTENSITY > 0.003) {
+            hasHit = true;
           }
+
+          color += vec4(disk_color, 1.0) * disk_alpha * ds * DISK_INTENSITY;
         }
       }
 
