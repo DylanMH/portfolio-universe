@@ -100,21 +100,29 @@ export const certifications: Certification[] = [
     id: 'intro-web-dev',
     name: 'Introduction to Web Development with HTML, CSS, JavaScript',
     issuer: 'Coursera',
+    url: 'https://coursera.org/share/d1a554c742b7164bad2995aca1fc755e',
+    image: '/assets/certificates/coursera-introhtml.jpg',
   },
   {
     id: 'frontend-react',
     name: 'Developing Front-End Apps with React',
     issuer: 'Coursera',
+    url: 'https://coursera.org/share/eb4f89350f336cbae13f9a81c02b54ed',
+    image: '/assets/certificates/coursera-frontend.jpg',
   },
   {
     id: 'backend-node',
     name: 'Developing Back-End Apps with Node.js and Express',
     issuer: 'Coursera',
+    url: 'https://coursera.org/share/4e3b6f9b0ce0cb9c52c2fc3dc0177f33',
+    image: '/assets/certificates/coursera-backend.jpg',
   },
   {
     id: 'github-cert',
     name: 'Getting Started with Git and GitHub',
     issuer: 'Coursera',
+    url: 'https://coursera.org/share/c0fa859c34998ac8d577a29085c30077',
+    image: '/assets/certificates/coursera-git.jpg',
   },
 ]
 

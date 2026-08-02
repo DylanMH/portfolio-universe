@@ -81,6 +81,7 @@ export interface Certification {
   issuer: string
   date?: string
   url?: string
+  image?: string
 }
 
 export interface SocialLink {

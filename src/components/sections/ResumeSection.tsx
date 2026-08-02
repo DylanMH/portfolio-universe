@@ -67,35 +67,43 @@ export function ResumeSection() {
 
       <div>
         <h3 className="mb-4 text-lg font-semibold text-white">Certifications</h3>
-        <div className="flex flex-wrap gap-3">
-          {certifications.map((cert) =>
-            cert.url ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {certifications.map((cert) => {
+            const inner = (
+              <>
+                {cert.image && (
+                  <img
+                    src={cert.image}
+                    alt={`${cert.name} certificate`}
+                    loading="lazy"
+                    className="mb-2 h-12 w-auto rounded bg-black/30 p-0.5 object-contain"
+                  />
+                )}
+                <p className="font-medium text-white no-underline">{cert.name}</p>
+                <p className="text-space-muted">
+                  {cert.issuer}
+                  {cert.date ? ` · ${cert.date}` : ''}
+                </p>
+              </>
+            )
+            const cardClass =
+              'group flex items-start gap-3 rounded-xl border border-space-panel-border/50 bg-space-panel/50 p-3 text-sm no-underline transition hover:-translate-y-0.5 hover:border-accent/60 hover:bg-space-panel/80 hover:shadow-lg hover:shadow-accent/10'
+            return cert.url ? (
               <a
                 key={cert.id}
                 href={cert.url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-space-panel/50 px-4 py-3 text-sm transition hover:border-accent/50"
+                className={cardClass}
               >
-                <p className="font-medium text-white">{cert.name}</p>
-                <p className="text-space-muted">
-                  {cert.issuer}
-                  {cert.date ? ` · ${cert.date}` : ''}
-                </p>
+                {inner}
               </a>
             ) : (
-              <div
-                key={cert.id}
-                className="rounded-xl bg-space-panel/50 px-4 py-3 text-sm transition hover:border-accent/50"
-              >
-                <p className="font-medium text-white">{cert.name}</p>
-                <p className="text-space-muted">
-                  {cert.issuer}
-                  {cert.date ? ` · ${cert.date}` : ''}
-                </p>
+              <div key={cert.id} className={cardClass}>
+                {inner}
               </div>
             )
-          )}
+          })}
         </div>
       </div>
 
