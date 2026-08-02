@@ -80,10 +80,12 @@ function getBlackHoleShaders(nsteps: number, step: number) {
             phi = mod(phi, 2.0 * PI);
 
             vec2 tex_coord = vec2(phi / (2.0 * PI), 1.0 - (r - DISK_IN) / (DISK_OUT - DISK_IN));
-            vec4 tex_color = texture2D(uDiskTexture, tex_coord);
+            // Positive LOD bias samples a blurrier mip level, which suppresses
+            // the moire stipple that appears when the disk is minified edge-on.
+            vec4 tex_color = texture2D(uDiskTexture, tex_coord, 0.75);
             vec3 disk_color = tex_color.rgb;
-            float disk_alpha = clamp(dot(disk_color, disk_color) / 4.5, 0.0, 1.0);
-            float fade = smoothstep(DISK_OUT, DISK_OUT * 0.82, r);
+            float disk_alpha = clamp(dot(disk_color, disk_color) / 6.0, 0.0, 1.0);
+            float fade = smoothstep(DISK_OUT, DISK_OUT * 0.75, r) * smoothstep(DISK_IN * 0.95, DISK_IN * 1.2, r);
             disk_alpha *= fade;
 
             if (disk_alpha > 0.0) {
@@ -151,7 +153,7 @@ const configureDiskTexture = (texture: THREE.Texture) => {
   texture.minFilter = THREE.LinearMipmapLinearFilter
   texture.magFilter = THREE.LinearFilter
   texture.generateMipmaps = true
-  texture.anisotropy = 8
+  texture.anisotropy = 16
 }
 
 function BlackHoleDisk({ quality }: { quality: QualityLevel }) {
