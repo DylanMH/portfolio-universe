@@ -35,9 +35,9 @@ export function useResponsiveScene(quality: QualityLevel): ResponsiveSceneConfig
       // Modern phones report DPR 3-4x, so even "medium" needs a higher floor
       // to avoid a visibly upscaled render; desktops stay conservative.
       const qualityCap = resolved === 'low' ? 1 : resolved === 'medium' ? (isMobile ? 2.5 : 1.75) : 2
-      // On mobile, honor an explicit HIGH selection with the native pixel ratio —
-      // upscale blur is far more visible on high-DPI phone screens.
-      const dprCap = isMobile && resolved === 'high' ? baseDpr : qualityCap
+      // Mobile HIGH renders near-native for sharpness, but caps at 3x — past
+      // that the fragment cost (raymarcher + bloom) outweighs the visual gain.
+      const dprCap = isMobile && resolved === 'high' ? Math.min(baseDpr, 3) : qualityCap
       const dpr = Math.min(baseDpr, dprCap)
 
       setConfig({
@@ -45,7 +45,7 @@ export function useResponsiveScene(quality: QualityLevel): ResponsiveSceneConfig
         isTablet,
         orbitScale: isMobile ? 0.28 : isTablet ? 0.38 : 0.46,
         cameraScale: isMobile ? 1.2 : 1,
-        starCount: resolved === 'high' ? 6000 : resolved === 'medium' ? 3000 : 800,
+        starCount: resolved === 'high' ? 6000 : resolved === 'medium' ? 4000 : 800,
         enableBloom: resolved === 'high',
         enableParticles: resolved !== '2d',
         dpr,

@@ -31,7 +31,7 @@ const configureEquirectTexture = (texture: THREE.Texture) => {
   texture.mapping = THREE.EquirectangularReflectionMapping
 }
 
-function MilkyWaySphere() {
+function MilkyWaySphere({ brightness }: { brightness: string }) {
   const ref = useRef<THREE.Mesh>(null)
   const map = useTextureAsync('/assets/background/milkyway.jpg', THREE.SRGBColorSpace, configureEquirectTexture)
 
@@ -46,7 +46,7 @@ function MilkyWaySphere() {
       <sphereGeometry args={[1, 64, 64]} />
       <meshBasicMaterial
         map={map}
-        color="#6b6b78"
+        color={brightness}
         side={THREE.BackSide}
         fog={false}
         depthWrite={false}
@@ -58,13 +58,16 @@ function MilkyWaySphere() {
 export function NebulaBackground() {
   const quality = useResolvedQuality()
   const cloudTexture = useMemo(() => createCloudTexture(), [])
+  // Non-high tiers get no bloom pass, which leaves the background reading
+  // dark — compensate with a brighter sky tint and stronger nebulae (free).
+  const dimmer = quality !== 'high'
 
   return (
     <>
-      {quality !== 'low' && <MilkyWaySphere />}
+      {quality !== 'low' && <MilkyWaySphere brightness={dimmer ? '#9c9cae' : '#6b6b78'} />}
       {cloudTexture && nebulaClouds.map((cloud) => (
         <sprite key={cloud.position.join('-')} position={cloud.position} scale={cloud.scale}>
-          <spriteMaterial map={cloudTexture} color={cloud.color} transparent opacity={cloud.opacity} depthWrite={false} blending={THREE.AdditiveBlending} />
+          <spriteMaterial map={cloudTexture} color={cloud.color} transparent opacity={dimmer ? cloud.opacity * 1.5 : cloud.opacity} depthWrite={false} blending={THREE.AdditiveBlending} />
         </sprite>
       ))}
     </>

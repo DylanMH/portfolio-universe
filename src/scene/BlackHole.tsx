@@ -14,7 +14,7 @@ const DISK_OUT = 5.0
 const WORLD_SCALE = 6
 const BH_SCALE = 1 / WORLD_SCALE
 
-function getBlackHoleShaders(nsteps: number, step: number) {
+function getBlackHoleShaders(nsteps: number, step: number, diskIntensity: number) {
   const vertexShader = `
     varying vec3 vRayDir;
 
@@ -38,7 +38,7 @@ function getBlackHoleShaders(nsteps: number, step: number) {
     #define DISK_IN ${DISK_IN.toFixed(4)}
     #define DISK_OUT ${DISK_OUT.toFixed(4)}
     #define DISK_HALF 0.15
-    #define DISK_INTENSITY 2.75
+    #define DISK_INTENSITY ${diskIntensity.toFixed(2)}
 
     uniform float uTime;
     uniform float uScale;
@@ -69,7 +69,7 @@ function getBlackHoleShaders(nsteps: number, step: number) {
       for (int i = 0; i < NSTEPS; i++) {
         vec3 oldpoint = point;
         // Larger steps far away (curvature negligible), finer near the hole.
-        float ds = STEP * mix(0.4, 1.2, smoothstep(1.0, 4.0, dist));
+        float ds = STEP * clamp(dist * 0.3, 0.4, 1.2);
         point += velocity * ds;
         float r2 = dot(point, point);
         vec3 accel = -1.5 * h2 * point / (r2 * r2 * sqrt(r2));
@@ -179,8 +179,12 @@ function BlackHoleDisk({ quality }: { quality: QualityLevel }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const step = isHigh ? 0.1 : isMobile ? 0.11 : 0.12
   const nsteps = isHigh ? 450 : 400
+  const diskIntensity = isHigh ? 2.1 : 2.75
   const segments: [number, number] = isHigh ? [64, 48] : [48, 36]
-  const { vertexShader, fragmentShader } = useMemo(() => getBlackHoleShaders(nsteps, step), [nsteps, step])
+  const { vertexShader, fragmentShader } = useMemo(
+    () => getBlackHoleShaders(nsteps, step, diskIntensity),
+    [nsteps, step, diskIntensity]
+  )
 
   const uniforms = useMemo(
     () => ({
