@@ -16,6 +16,7 @@ import { SolarSystem } from './SolarSystem'
 import { CameraController } from './CameraController'
 import { SceneEffects } from './SceneEffects'
 import { PerformanceMonitor } from './PerformanceMonitor'
+import { SceneDebugHud } from './SceneDebugHud'
 
 function Scene({ quality }: { quality: QualityLevel }) {
   const { camera } = useThree()
@@ -62,6 +63,7 @@ export default function SpaceScene() {
 
   return (
     <div className="fixed inset-0 z-0">
+      <SceneDebugHud />
       <Suspense fallback={<LoadingScreen fullScreen message="Generating universe..." />}>
         <Canvas
           camera={{ position: [0, 60, 150], fov: 60, near: 0.1, far: 1000 }}
