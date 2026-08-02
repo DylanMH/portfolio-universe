@@ -22,9 +22,9 @@ function Scene({ quality }: { quality: QualityLevel }) {
   const { camera } = useThree()
   const planetPositionsRef = useRef<Record<string, THREE.Vector3>>({})
 
-  // Set initial camera position
+  // Set initial camera position (matches the computed home view)
   useMemo(() => {
-    camera.position.set(0, 60, 150)
+    camera.position.set(0, 210, 180)
     camera.lookAt(0, 0, 0)
   }, [camera])
 
@@ -66,7 +66,7 @@ export default function SpaceScene() {
       <SceneDebugHud />
       <Suspense fallback={<LoadingScreen fullScreen message="Generating universe..." />}>
         <Canvas
-          camera={{ position: [0, 60, 150], fov: 60, near: 0.1, far: 1000 }}
+          camera={{ position: [0, 210, 180], fov: 60, near: 0.1, far: 1000 }}
           dpr={responsive.dpr}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
           frameloop={reducedMotion ? 'never' : 'always'}

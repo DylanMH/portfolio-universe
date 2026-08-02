@@ -42,7 +42,7 @@ function MilkyWaySphere({ brightness }: { brightness: string }) {
   if (!map) return null
 
   return (
-    <mesh ref={ref} scale={900}>
+    <mesh ref={ref} scale={900} rotation={[0.9, 0, 0.15]}>
       <sphereGeometry args={[1, 64, 64]} />
       <meshBasicMaterial
         map={map}

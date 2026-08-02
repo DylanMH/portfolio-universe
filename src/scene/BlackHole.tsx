@@ -63,7 +63,7 @@ function getBlackHoleShaders(nsteps: number, step: number, diskIntensity: number
       }
 
       vec4 color = vec4(0.0);
-      bool hasHit = false;
+      bool hitHorizon = false;
       float dist = length(point);
 
       for (int i = 0; i < NSTEPS; i++) {
@@ -77,8 +77,7 @@ function getBlackHoleShaders(nsteps: number, step: number, diskIntensity: number
         dist = length(point);
 
         if (dist < 1.0 && length(oldpoint) > 1.0) {
-          hasHit = true;
-          color = vec4(0.0, 0.0, 0.0, 1.0);
+          hitHorizon = true;
           break;
         }
 
@@ -91,8 +90,10 @@ function getBlackHoleShaders(nsteps: number, step: number, diskIntensity: number
         // Volumetric thin-disk: every step near the disk plane contributes a
         // density-weighted sample. No binary plane-crossing test, so there is
         // no per-pixel aliasing for GPU float differences to amplify.
+        // The tight |y| gate keeps far-field rays from accumulating a faint
+        // haze across the whole bounding sphere (visible as a circular aura).
         float radial = length(point.xz);
-        if (radial >= DISK_IN && radial <= DISK_OUT && abs(point.y) < 0.5) {
+        if (radial >= DISK_IN && radial <= DISK_OUT && abs(point.y) < 0.3) {
           float phi = atan(point.x, point.z);
           phi -= uTime;
           phi = mod(phi, 2.0 * PI);
@@ -104,19 +105,23 @@ function getBlackHoleShaders(nsteps: number, step: number, diskIntensity: number
           disk_alpha *= smoothstep(DISK_OUT, DISK_OUT * 0.75, radial) * smoothstep(DISK_IN * 0.95, DISK_IN * 1.2, radial);
           disk_alpha *= density;
 
-          if (disk_alpha * ds * DISK_INTENSITY > 0.003) {
-            hasHit = true;
-          }
-
           color += vec4(disk_color, 1.0) * disk_alpha * ds * DISK_INTENSITY;
         }
       }
 
-      if (!hasHit) {
-        discard;
+      if (hitHorizon) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
       }
 
-      gl_FragColor = color;
+      // Premultiplied compositing (OneFactor / OneMinusSrcAlpha): faint
+      // accumulation blends with the sky instead of occluding it as a dark
+      // halo. Near-zero fragments are discarded to save blending work.
+      float alpha = clamp(color.a, 0.0, 1.0);
+      if (alpha < 0.015) {
+        discard;
+      }
+      gl_FragColor = vec4(color.rgb, alpha);
     }
   `
 
@@ -215,6 +220,11 @@ function BlackHoleDisk({ quality }: { quality: QualityLevel }) {
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
         uniforms={uniforms}
+        transparent
+        depthWrite={false}
+        blending={THREE.CustomBlending}
+        blendSrc={THREE.OneFactor}
+        blendDst={THREE.OneMinusSrcAlphaFactor}
       />
     </mesh>
   )

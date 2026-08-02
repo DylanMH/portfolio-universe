@@ -11,8 +11,30 @@ interface CameraControllerProps {
   planetPositionsRef: MutableRefObject<Record<string, THREE.Vector3>>
 }
 
-const homeTargetDesktop = new THREE.Vector3(0, 60, 100)
 const homeTargetMobile = new THREE.Vector3(0, 85, 100)
+// Steep "system map" elevation: shallow angles let near-side planets dive
+// under the camera and off the bottom of the frame, no matter the distance.
+const HOME_ELEVATION = THREE.MathUtils.degToRad(50)
+// Farthest planet orbit plus clearance for the planet body itself.
+const OUTER_ORBIT_CLEARANCE = 125
+const ORBIT_FIT_MARGIN = THREE.MathUtils.degToRad(4)
+
+function computeHomeTargetDesktop(camera: THREE.Camera, out: THREE.Vector3) {
+  const perspective = camera as THREE.PerspectiveCamera
+  const halfVerticalFov = THREE.MathUtils.degToRad((perspective.fov || 60) / 2)
+  const halfHorizontalFov = Math.atan(Math.tan(halfVerticalFov) * (perspective.aspect || 1))
+
+  // Distance so the near edge of the outer orbit stays inside the bottom of
+  // the frame when looking down at the system from HOME_ELEVATION.
+  const tanDown = Math.tan(HOME_ELEVATION + halfVerticalFov - ORBIT_FIT_MARGIN)
+  const dVertical =
+    (OUTER_ORBIT_CLEARANCE * tanDown) / (tanDown * Math.cos(HOME_ELEVATION) - Math.sin(HOME_ELEVATION))
+  // Distance so the sides of the outer orbit stay inside the horizontal FOV.
+  const dHorizontal = OUTER_ORBIT_CLEARANCE / Math.tan(halfHorizontalFov - ORBIT_FIT_MARGIN)
+
+  const d = Math.max(dVertical, dHorizontal, 100)
+  return out.set(0, d * Math.sin(HOME_ELEVATION), d * Math.cos(HOME_ELEVATION))
+}
 const homeLookAt = new THREE.Vector3(0, 0, 0)
 const aboutTargetDesktop = new THREE.Vector3(0, 15, 95)
 const aboutTargetMobile = new THREE.Vector3(0, 30, 125)
@@ -30,12 +52,14 @@ export function CameraController({ planetPositionsRef }: CameraControllerProps) 
   const reducedMotion = useSettingsStore((state) => state.reducedMotion)
   const { isMobile } = useResponsiveScene('high')
 
-  const targetPos = useRef(new THREE.Vector3().copy(homeTargetDesktop))
+  const targetPos = useRef(new THREE.Vector3(0, 60, 100))
   const targetLook = useRef(new THREE.Vector3().copy(homeLookAt))
+  const travelStart = useRef<number | null>(null)
 
   useEffect(() => {
     if (currentSection === null) {
-      targetPos.current.copy(isMobile ? homeTargetMobile : homeTargetDesktop)
+      if (isMobile) targetPos.current.copy(homeTargetMobile)
+      else computeHomeTargetDesktop(camera, targetPos.current)
       targetLook.current.copy(homeLookAt)
     } else if (currentSection === BLACK_HOLE_ID) {
       targetPos.current.copy(isMobile ? aboutTargetMobile : aboutTargetDesktop)
@@ -61,6 +85,11 @@ export function CameraController({ planetPositionsRef }: CameraControllerProps) 
   }, [currentSection, isMobile, planetPositionsRef, reducedMotion, camera, transitionState, setTransitionState, setInteractionLocked])
 
   useFrame(() => {
+    if (!currentSection && !isMobile) {
+      // Recompute every frame so window resizes keep the outer orbit in view.
+      computeHomeTargetDesktop(camera, targetPos.current)
+    }
+
     if (currentSection && currentSection !== BLACK_HOLE_ID) {
       const section = celestialSections.find((item) => item.id === currentSection)
       const position = planetPositionsRef.current[currentSection]
@@ -73,16 +102,27 @@ export function CameraController({ planetPositionsRef }: CameraControllerProps) 
 
     if (reducedMotion) return
 
-    const lerpSpeed = isMobile ? 0.08 : 0.04
+    // Once arrived, follow the (still orbiting) planet with a fast lerp so
+    // the view stays locked on. The slow travel lerp can never fully catch
+    // the outer planets — their tangential speed exceeds its closing speed
+    // near the target — so arrival also has a time-based failsafe.
+    const following =
+      !!currentSection && currentSection !== BLACK_HOLE_ID && transitionState !== 'traveling'
+    const lerpSpeed = following ? 0.5 : isMobile ? 0.08 : 0.04
     camera.position.lerp(targetPos.current, lerpSpeed)
     camera.lookAt(targetLook.current)
 
     if (transitionState === 'traveling') {
+      if (travelStart.current === null) travelStart.current = performance.now()
       const distance = camera.position.distanceTo(targetPos.current)
-      if (distance < 1.5) {
+      const elapsed = performance.now() - travelStart.current
+      if (distance < 1.5 || elapsed > 3500) {
         setTransitionState('arriving')
         setInteractionLocked(false)
+        travelStart.current = null
       }
+    } else {
+      travelStart.current = null
     }
   })
 

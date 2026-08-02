@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useDeviceQuality } from '@/hooks/useDeviceQuality'
 
-export const SCENE_BUILD_ID = 'bh-2026-08-02.5-perf2-light'
+export const SCENE_BUILD_ID = 'bh-2026-08-02.10-travel-fix'
 
 interface DebugInfo {
   buildId: string

@@ -61,7 +61,7 @@ function TexturedPlanetSurface({
         normalMap={normal || undefined}
         color={config.color}
         emissive={config.emissive}
-        emissiveIntensity={config.emissiveIntensity * 0.12}
+        emissiveIntensity={config.emissiveIntensity * 0.35}
         roughness={0.95}
         metalness={0}
         normalScale={normal ? new THREE.Vector2(0.5, 0.5) : undefined}
@@ -209,7 +209,7 @@ export const PortfolioPlanet = forwardRef<THREE.Group, PortfolioPlanetProps>(
     const moonData = useMemo(() => {
       return Array.from({ length: section.moonCount ?? 0 }, (_, i) => {
         const angle = (i / (section.moonCount ?? 1)) * Math.PI * 2
-        const distance = section.size * (2.7 + i * 0.35)
+        const distance = section.size * (1.9 + i * 0.25)
         return {
           position: [Math.cos(angle) * distance, 0, Math.sin(angle) * distance] as [number, number, number],
           size: section.size * (0.16 + (i % 2) * 0.04),

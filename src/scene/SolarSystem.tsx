@@ -12,14 +12,17 @@ interface SolarSystemProps {
 
 export function SolarSystem({ planetPositionsRef }: SolarSystemProps) {
   const planetRefs = useRef<THREE.Group[]>([])
+  const anglesRef = useRef<number[]>(celestialSections.map((s) => s.initialAngle))
   const reducedMotion = useSettingsStore((state) => state.reducedMotion)
 
-  useFrame((state) => {
-    const time = state.clock.getElapsedTime()
+  useFrame((_, delta) => {
+    // Accumulate from clamped deltas instead of absolute clock time so that
+    // browser tab switches / RAF hitches never teleport the planets.
+    const dt = reducedMotion ? 0 : Math.min(delta, 0.1)
 
     celestialSections.forEach((section, i) => {
-      const speed = reducedMotion ? 0 : section.orbitSpeed
-      const angle = section.initialAngle + time * speed
+      anglesRef.current[i] += dt * section.orbitSpeed
+      const angle = anglesRef.current[i]
       const orbitRadius = section.orbitRadius
       const x = Math.cos(angle) * orbitRadius
       const z = Math.sin(angle) * orbitRadius
