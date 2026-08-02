@@ -54,20 +54,37 @@ function getBlackHoleShaders(nsteps: number, step: number) {
       vec3 c = cross(point, velocity);
       float h2 = dot(c, c);
 
+      // Cheap rejection: the straight-line impact parameter is an upper bound
+      // on how close this ray can ever get (bending only pulls it inward, and
+      // at this distance bending is negligible). Pixels that cannot reach the
+      // disk or horizon skip the march entirely.
+      if (h2 > 45.5) {
+        discard;
+      }
+
       vec4 color = vec4(0.0);
       bool hasHit = false;
+      float dist = length(point);
 
       for (int i = 0; i < NSTEPS; i++) {
         vec3 oldpoint = point;
-        float ds = STEP * mix(0.5, 1.0, smoothstep(1.0, 4.0, length(point)));
+        // Larger steps far away (curvature negligible), finer near the hole.
+        float ds = STEP * mix(0.4, 1.2, smoothstep(1.0, 4.0, dist));
         point += velocity * ds;
-        vec3 accel = -1.5 * h2 * point / pow(dot(point, point), 2.5);
+        float r2 = dot(point, point);
+        vec3 accel = -1.5 * h2 * point / (r2 * r2 * sqrt(r2));
         velocity += accel * ds;
-        float dist = length(point);
+        dist = length(point);
 
         if (dist < 1.0 && length(oldpoint) > 1.0) {
           hasHit = true;
           color = vec4(0.0, 0.0, 0.0, 1.0);
+          break;
+        }
+
+        // Early escape: past periapsis, beyond the disk, heading outward —
+        // the ray can never return to the disk or horizon.
+        if (dist > 6.0 && dot(point, velocity) > 0.0) {
           break;
         }
 
@@ -161,7 +178,7 @@ function BlackHoleDisk({ quality }: { quality: QualityLevel }) {
   const isHigh = quality === 'high'
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const step = isHigh ? 0.1 : isMobile ? 0.11 : 0.12
-  const nsteps = isHigh ? 650 : 500
+  const nsteps = isHigh ? 450 : 400
   const segments: [number, number] = isHigh ? [64, 48] : [48, 36]
   const { vertexShader, fragmentShader } = useMemo(() => getBlackHoleShaders(nsteps, step), [nsteps, step])
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useDeviceQuality } from '@/hooks/useDeviceQuality'
 
-export const SCENE_BUILD_ID = 'bh-2026-08-02.3-volumetric'
+export const SCENE_BUILD_ID = 'bh-2026-08-02.4-perf'
 
 interface DebugInfo {
   buildId: string
