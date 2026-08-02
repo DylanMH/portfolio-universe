@@ -26,6 +26,12 @@ function getBlackHoleShaders(nsteps: number, step: number) {
   `
 
   const fragmentShader = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
+
     #define PI 3.14159265359
     #define STEP ${step.toFixed(4)}
     #define NSTEPS ${nsteps}
@@ -51,9 +57,10 @@ function getBlackHoleShaders(nsteps: number, step: number) {
 
       for (int i = 0; i < NSTEPS; i++) {
         vec3 oldpoint = point;
-        point += velocity * STEP;
+        float ds = STEP * mix(0.5, 1.0, smoothstep(1.0, 4.0, length(point)));
+        point += velocity * ds;
         vec3 accel = -1.5 * h2 * point / pow(dot(point, point), 2.5);
-        velocity += accel * STEP;
+        velocity += accel * ds;
         float dist = length(point);
 
         bool horizon_mask = dist < 1.0 && length(oldpoint) > 1.0;
@@ -153,8 +160,8 @@ function BlackHoleDisk({ quality }: { quality: QualityLevel }) {
   const diskTexture = useTextureAsync('/assets/black-hole/accretion_disk.png', THREE.SRGBColorSpace, configureDiskTexture)
   const isHigh = quality === 'high'
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-  const step = isHigh ? 0.1 : isMobile ? 0.12 : 0.13
-  const nsteps = isHigh ? 500 : isMobile ? 400 : 400
+  const step = isHigh ? 0.1 : isMobile ? 0.11 : 0.12
+  const nsteps = isHigh ? 650 : 500
   const segments: [number, number] = isHigh ? [64, 48] : [48, 36]
   const { vertexShader, fragmentShader } = useMemo(() => getBlackHoleShaders(nsteps, step), [nsteps, step])
 
