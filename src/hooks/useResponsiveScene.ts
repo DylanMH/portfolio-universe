@@ -33,7 +33,9 @@ export function useResponsiveScene(quality: QualityLevel): ResponsiveSceneConfig
       const isTablet = width >= 768 && width < 1024
       const baseDpr = window.devicePixelRatio || 1
       const qualityCap = resolved === 'low' ? 1 : resolved === 'medium' ? 1.75 : 2
-      const dprCap = isMobile ? Math.min(qualityCap, 2) : qualityCap
+      // On mobile, honor an explicit HIGH selection with the native pixel ratio —
+      // upscale blur is far more visible on high-DPI phone screens.
+      const dprCap = isMobile && resolved === 'high' ? baseDpr : qualityCap
       const dpr = Math.min(baseDpr, dprCap)
 
       setConfig({

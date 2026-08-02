@@ -146,7 +146,7 @@ function BlackHoleSimple() {
 }
 
 const configureDiskTexture = (texture: THREE.Texture) => {
-  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapS = THREE.MirroredRepeatWrapping
   texture.wrapT = THREE.ClampToEdgeWrapping
   texture.minFilter = THREE.LinearMipmapLinearFilter
   texture.magFilter = THREE.LinearFilter
